@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>USMA CSSv3</title>
+  <!--Felipe Legorreta and Rafael Sanchez were here !-->
+  <style>
+	body {background-color: #000000;
+			font-family: Arial, Helvetica, sans-serif;
+			color: white;}
+	h1   {color: white;}
+	
+        #menu { 
+            display: none; 
+        } 
+    </style>
+  
+</head>
+
+<body>
+  <h1>USMA Cold Storage Search v3</h1>
+  <h3>The unofficial, unsupported tool to help you do basic searches within raw logs downloaded from USM Anywhere.</h3>
+  <h6><li>Use at your own discretion</li>
+  <li>You have to unzip the downloaded logs, only .log files are allowed</li>
+  <li>Always search from broad to specific (Use a zoom-in slowly approach)</li>
+  <li>All data is in handled locally in the browser</li>
+  <li>The bigger the file sample, the slower this will be</li>
+  <li>Yes, you can select multiple files</li></h6>  
+  <hr>
+
+	<div id="start">
+		</br>
+		<b>Begin by searching for:</b> <input type="text" id="search_value"/> in 
+		<input type="file" id="inputfiles" accept=".log,.txt" onchange="readFiles(event)" multiple>
+	</div>
+
+	<div id="menu">
+		</br>
+		<input type="text" id="search_value2"/> <button id="nested_search" onclick="nested_search();">Search within results</button> <button onclick="showresults();">Show results</button>
+		<button id="download_link" onclick="download();">Save results</button> <button onclick="location.reload();sessionStorage.clear();">Start over</button>
+	</div>
+
+	<div id="results">
+		<pre id="output"></pre>
+	</div>
+
+	<div id="scripts">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js">
+		</script>
+	
+		<script>//------------------Search-----------------------------
+		//Counter for the number of matches
+		var nresult = 0;
+		//Reads how many files were selected		
+		function readFiles(event) {
+			var fileList = event.target.files;
+			for(var i=0; i < fileList.length; i++ ) {
+				loadAsText(fileList[i]);
+			}
+		}
+
+		function loadAsText(theFile) {
+			var reader = new FileReader();
+			reader.onload = function(loadedEvent) {
+			//Grabs the search value defined
+			var search_value = document.getElementById('search_value').value
+			sessionStorage.setItem("search",search_value);
+			//Copies the content of the file into a variable
+			var data = loadedEvent.target.result;
+			//Split the text into lines
+			var lines = data.split('\n');
+			//Count the number of log lines
+			var nlines = data.length;
+			//Loops each line and searches for the word, if found it prints the line in the console and result counter +1
+			for (var i=0; i<nlines; i++ ) {
+				var output = lines[i].toLowerCase().match(search_value.toLowerCase());
+				if (output != null){
+				//console.log(lines[i]);
+				nresult++;
+				//Write to a session file on host
+				sessionStorage.setItem(nresult,lines[i]);
+				}
+			document.getElementById("output").innerHTML = "Your search for <b>" + search_value + "</b> returned " + nresult + " result(s).</br></br><hr>";
+			}
+			}
+		reader.readAsText(theFile);
+		}
+		</script>
+		
+		<script>//--------------Hide starting div------------------
+		$(document).ready(function(){
+		$("#inputfiles").click(function(){
+			$("#start").hide();
+			});
+		$("#inputfiles").click(function(){
+			$("#menu").show();
+			});
+		});
+		</script>
+		
+		<script>//---------------------Show the results from the storage in the results section--------------
+		function showresults(){
+			for (var i = 0; i < sessionStorage.length; i++) {
+				const key = sessionStorage.key(i);
+				const value = sessionStorage.getItem(key);
+				//Prints the results on screen ignoring the search value stored
+				if(key != "search"){
+				document.getElementById("output")
+					.innerHTML += `${value}`+'</br>';
+			}}
+		}
+		</script>
+		
+		<script>//--------------------Download results---------------------
+		function download() {
+			var filename = "USMACSS_results.txt";
+			var text = "";
+			
+			for (var i = 0; i < sessionStorage.length; i++) {
+				const key = sessionStorage.key(i);
+				const value = sessionStorage.getItem(key);
+				//Ignores the search value stored and appends the strings to a variable for downloading
+				if(key != "search"){
+				text += `${value}`+'\n';
+			}}
+		
+			var element = document.createElement('a');
+				element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+				element.setAttribute('download', filename);
+				element.style.display = 'none';
+				document.body.appendChild(element);
+				element.click();
+				document.body.removeChild(element);
+		}		
+		</script>
+		
+		<script>//---------------------Search within results---------------------
+		function nested_search(){
+		//Counter for the number of matches
+		var nresult = 0;
+		//Grabs the search value defined
+		var search_value = document.getElementById('search_value2').value
+		var searching = sessionStorage.getItem("search") + " and " + search_value;
+		for (var i = 0; i < sessionStorage.length; i++) {
+			const key = sessionStorage.key(i);
+				//Ignores the search value stored and if there is a match the result count goes +1
+				if(key != "search"){
+					const value = sessionStorage.getItem(key);
+					var output = value.toLowerCase().match(search_value.toLowerCase());
+					if (output != null){
+					nresult++;
+					}
+				}
+				
+			}
+			//If user wants to continue new values and data will be saved
+			if (window.confirm(nresult+" result(s) found. Do you want to continue?")){
+			document.getElementById("output").innerHTML = "Your search for <b>" + searching + "</b> returned " + nresult + " result(s).</br></br><hr>";
+				sessionStorage.setItem("search",searching);
+				for (var j=0; j<sessionStorage.length+2; j++){
+				for (var i = 0; i < sessionStorage.length; i++) {
+					const key = sessionStorage.key(i);					
+					//Ignores the search value stored and if anything doesn't match it gets deleted
+					if(key != "search"){	
+						const value = sessionStorage.getItem(key);
+						var output = value.toLowerCase().match(search_value.toLowerCase());
+						if (output === null){
+						sessionStorage.removeItem(key);
+						}
+					}
+					
+				}}
+			
+			}
+		}
+		</script>
+	</div>
+	
+</body>
+</html>
